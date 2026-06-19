@@ -1,0 +1,71 @@
+{
+  "features": [
+    "INDICE_OCUPACIONAL",
+    "PROMEDIO_DIAS_ESTADA",
+    "INDICE_ROTACION",
+    "NUMERO_EGRESOS",
+    "PROMEDIO_CAMAS_DISPONIBLE",
+    "LETALIDAD",
+    "MES"
+  ],
+  "n_clusters": 4,
+  "silhouette_score": 0.2476,
+  "davies_bouldin": 1.276,
+  "calinski_harabasz": 49714.0,
+  "cluster_names": {
+    "0": "Alta Ocupación — Hospitales Grandes",
+    "1": "Operación Típica",
+    "2": "Baja Presión Asistencial",
+    "3": "UCI / Alta Complejidad"
+  },
+  "cluster_colors": {
+    "0": "#f97316",
+    "1": "#22c55e",
+    "2": "#3b82f6",
+    "3": "#ef4444"
+  },
+  "cluster_sizes": {
+    "0": 15229,
+    "1": 83913,
+    "2": 43079,
+    "3": 17567
+  },
+  "centroids": [
+    {
+      "INDICE_OCUPACIONAL": 85.77,
+      "PROMEDIO_DIAS_ESTADA": 7.34,
+      "INDICE_ROTACION": 4.39,
+      "NUMERO_EGRESOS": 368.99,
+      "PROMEDIO_CAMAS_DISPONIBLE": 92.53,
+      "LETALIDAD": 2.8,
+      "MES": 6.55
+    },
+    {
+      "INDICE_OCUPACIONAL": 76.79,
+      "PROMEDIO_DIAS_ESTADA": 10.06,
+      "INDICE_ROTACION": 3.6,
+      "NUMERO_EGRESOS": 64.67,
+      "PROMEDIO_CAMAS_DISPONIBLE": 19.25,
+      "LETALIDAD": 3.18,
+      "MES": 6.62
+    },
+    {
+      "INDICE_OCUPACIONAL": 21.96,
+      "PROMEDIO_DIAS_ESTADA": 4.88,
+      "INDICE_ROTACION": 1.44,
+      "NUMERO_EGRESOS": 11.72,
+      "PROMEDIO_CAMAS_DISPONIBLE": 6.89,
+      "LETALIDAD": 0.89,
+      "MES": 6.26
+    },
+    {
+      "INDICE_OCUPACIONAL": 83.44,
+      "PROMEDIO_DIAS_ESTADA": 63.3,
+      "INDICE_ROTACION": 0.69,
+      "NUMERO_EGRESOS": 9.76,
+      "PROMEDIO_CAMAS_DISPONIBLE": 16.37,
+      "LETALIDAD": 50.65,
+      "MES": 6.49
+    }
+  ]
+}
