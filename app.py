@@ -141,363 +141,672 @@ HTML_TEMPLATE = """
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>REM 20 — Predictor y Clustering Hospitalario</title>
+  <title>REM 20 — Estación de Análisis Clínico</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      /* ── Paleta: quirófano + expediente clínico ── */
+      --ink:          #0d3b3e;   /* verde quirófano oscuro — texto principal, header */
+      --ink-soft:     #2d5558;
+      --teal:         #1a6b6f;   /* verde médico medio — acentos, botones */
+      --teal-light:   #5fa8a3;
+      --paper:        #f7f5f0;   /* blanco hospital / papel de expediente */
+      --paper-line:   #e8e3d8;   /* líneas de cuaderno clínico */
+      --paper-card:   #ffffff;
+      --steel:        #8a9a9b;   /* gris acero de equipo médico */
+      --steel-dark:   #5c6b6c;
+
+      /* Triage — semántica real de urgencias */
+      --triage-green:  #16a34a;
+      --triage-amber:  #d97706;
+      --triage-red:    #dc2626;
+      --triage-green-bg: #ecfdf3;
+      --triage-amber-bg: #fffbeb;
+      --triage-red-bg:   #fef2f2;
+
+      --font-display: 'Inter', sans-serif;
+      --font-mono:    'JetBrains Mono', monospace;
+    }
+
+    * , *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
-      font-family: 'Segoe UI', Arial, sans-serif;
-      background: #f1f5f9;
-      color: #1e293b;
+      font-family: var(--font-display);
+      background: var(--paper);
+      color: var(--ink);
       min-height: 100vh;
+      background-image:
+        linear-gradient(var(--paper-line) 1px, transparent 1px);
+      background-size: 100% 32px;
+      background-attachment: local;
     }
 
-    /* ── Header ── */
+    /* ══════════════════════════════════════════
+       HEADER — placa de identificación + monitor ECG
+    ══════════════════════════════════════════ */
     header {
-      background: linear-gradient(135deg, #1e3a5f 0%, #2563eb 100%);
-      color: white;
-      padding: 20px 32px;
+      background: var(--ink);
+      color: var(--paper);
+      padding: 0;
+      position: relative;
+      overflow: hidden;
+      border-bottom: 4px solid var(--teal);
     }
-    header h1 { font-size: 22px; font-weight: 700; }
-    header p  { font-size: 13px; opacity: 0.8; margin-top: 4px; }
-
-    /* ── Tabs ── */
-    .tabs {
+    .header-inner {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 22px 28px 18px;
+      position: relative;
+      z-index: 2;
+    }
+    .header-top {
       display: flex;
-      background: white;
-      border-bottom: 2px solid #e2e8f0;
-      padding: 0 32px;
+      align-items: baseline;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 10px;
     }
-    .tab-btn {
-      padding: 14px 24px;
-      cursor: pointer;
-      font-size: 14px;
-      font-weight: 600;
-      color: #64748b;
+    .header-id {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      letter-spacing: .12em;
+      color: var(--teal-light);
+      text-transform: uppercase;
+    }
+    header h1 {
+      font-size: 24px;
+      font-weight: 800;
+      letter-spacing: -.01em;
+      margin-top: 4px;
+    }
+    header h1 .rx { color: var(--teal-light); font-weight: 500; }
+    header p.sub {
+      font-size: 12.5px;
+      color: var(--steel);
+      margin-top: 3px;
+      font-family: var(--font-mono);
+    }
+
+    /* ECG line — animated signature element */
+    .ecg-wrap {
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      height: 34px;
+      z-index: 1;
+      opacity: .55;
+    }
+    .ecg-wrap svg { width: 200%; height: 100%; }
+    .ecg-line {
+      fill: none;
+      stroke: var(--teal-light);
+      stroke-width: 1.6;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      animation: ecg-scroll 7s linear infinite;
+    }
+    @keyframes ecg-scroll {
+      from { transform: translateX(0); }
+      to   { transform: translateX(-50%); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .ecg-line { animation: none; }
+    }
+
+    /* ══════════════════════════════════════════
+       LAYOUT — panel lateral tipo admisión + contenido
+    ══════════════════════════════════════════ */
+    .shell {
+      max-width: 1180px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 220px 1fr;
+      gap: 0;
+      min-height: calc(100vh - 110px);
+    }
+
+    nav.ward {
+      border-right: 1px solid var(--paper-line);
+      padding: 28px 0;
+    }
+    .ward-label {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+      color: var(--steel-dark);
+      padding: 0 24px 12px;
+    }
+    .ward-btn {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      width: 100%;
+      text-align: left;
+      padding: 13px 24px;
       border: none;
       background: none;
-      border-bottom: 3px solid transparent;
-      margin-bottom: -2px;
-      transition: all 0.2s;
+      cursor: pointer;
+      font-family: var(--font-display);
+      font-size: 13.5px;
+      font-weight: 600;
+      color: var(--steel-dark);
+      border-left: 3px solid transparent;
+      transition: all .15s;
     }
-    .tab-btn:hover  { color: #2563eb; }
-    .tab-btn.active { color: #2563eb; border-bottom-color: #2563eb; }
+    .ward-btn .dot {
+      width: 7px; height: 7px; border-radius: 50%;
+      background: var(--steel);
+      flex-shrink: 0;
+      transition: all .15s;
+    }
+    .ward-btn:hover { background: var(--paper-card); color: var(--ink); }
+    .ward-btn.active {
+      background: var(--paper-card);
+      color: var(--ink);
+      border-left-color: var(--teal);
+    }
+    .ward-btn.active .dot { background: var(--teal); box-shadow: 0 0 0 3px rgba(26,107,111,.15); }
 
-    /* ── Content ── */
-    .tab-content { display: none; padding: 28px 32px; max-width: 1000px; }
-    .tab-content.active { display: block; }
+    .ward-meta {
+      padding: 18px 24px 0;
+      font-family: var(--font-mono);
+      font-size: 10.5px;
+      color: var(--steel);
+      line-height: 1.7;
+      border-top: 1px solid var(--paper-line);
+      margin-top: 16px;
+    }
+    .ward-meta strong { color: var(--ink-soft); }
 
-    /* ── Card ── */
-    .card {
-      background: white;
-      border-radius: 12px;
-      padding: 24px;
-      box-shadow: 0 1px 4px rgba(0,0,0,.07);
-      margin-bottom: 20px;
+    main { padding: 28px 32px 60px; }
+    .panel { display: none; }
+    .panel.active { display: block; animation: fade-in .25s ease; }
+    @keyframes fade-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+
+    /* ══════════════════════════════════════════
+       CARDS — expediente clínico
+    ══════════════════════════════════════════ */
+    .chart {
+      background: var(--paper-card);
+      border: 1px solid var(--paper-line);
+      border-radius: 4px;
+      margin-bottom: 22px;
+      box-shadow: 0 1px 2px rgba(13,59,62,.04);
     }
-    .card h2 {
-      font-size: 15px; font-weight: 700; color: #1e3a5f;
-      margin-bottom: 16px; padding-bottom: 8px;
-      border-bottom: 1px solid #e2e8f0;
+    .chart-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 20px;
+      border-bottom: 1px solid var(--paper-line);
+      background: linear-gradient(180deg, #fafaf7, var(--paper-card));
     }
+    .chart-head h2 {
+      font-size: 13px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .04em;
+      color: var(--ink);
+    }
+    .chart-head .tag {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      color: var(--teal);
+      background: rgba(26,107,111,.08);
+      padding: 3px 8px;
+      border-radius: 3px;
+      letter-spacing: .03em;
+    }
+    .chart-body { padding: 20px; }
 
     /* ── Form grid ── */
-    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 16px; }
     .field { display: flex; flex-direction: column; gap: 5px; }
     .field.full { grid-column: 1 / -1; }
-    label { font-size: 12px; font-weight: 600; color: #475569; text-transform: uppercase; letter-spacing: .03em; }
+    label {
+      font-family: var(--font-mono);
+      font-size: 10.5px;
+      font-weight: 600;
+      color: var(--steel-dark);
+      text-transform: uppercase;
+      letter-spacing: .04em;
+    }
     input, select {
       padding: 9px 11px;
-      border: 1px solid #cbd5e1;
-      border-radius: 8px;
-      font-size: 14px;
-      background: #f8fafc;
-      transition: border-color .15s;
+      border: 1px solid var(--paper-line);
+      border-radius: 3px;
+      font-size: 13.5px;
+      font-family: var(--font-display);
+      background: #fbfaf7;
+      color: var(--ink);
+      transition: border-color .15s, background .15s;
     }
-    input:focus, select:focus { outline: none; border-color: #2563eb; background: white; }
+    input:focus, select:focus {
+      outline: none;
+      border-color: var(--teal);
+      background: white;
+      box-shadow: 0 0 0 3px rgba(26,107,111,.1);
+    }
 
     .section-divider {
       grid-column: 1 / -1;
-      font-size: 11px; font-weight: 700; text-transform: uppercase;
-      color: #94a3b8; letter-spacing: .06em;
-      border-bottom: 1px solid #e2e8f0;
-      padding-bottom: 4px; margin-top: 6px;
+      font-family: var(--font-mono);
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      color: var(--teal);
+      letter-spacing: .08em;
+      padding-bottom: 5px;
+      margin-top: 8px;
+      border-bottom: 1px dashed var(--paper-line);
+      display: flex; align-items: center; gap: 6px;
     }
+    .section-divider::before { content: '+'; font-size: 12px; }
 
     /* ── Button ── */
     .btn {
-      margin-top: 18px; width: 100%; padding: 13px;
-      background: #2563eb; color: white;
-      border: none; border-radius: 10px;
-      font-size: 15px; font-weight: 700;
-      cursor: pointer; transition: background .2s;
+      margin-top: 18px;
+      width: 100%;
+      padding: 13px;
+      background: var(--ink);
+      color: var(--paper);
+      border: none;
+      border-radius: 3px;
+      font-family: var(--font-mono);
+      font-size: 13px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      cursor: pointer;
+      transition: background .15s;
     }
-    .btn:hover { background: #1d4ed8; }
-    .btn.green { background: #16a34a; }
-    .btn.green:hover { background: #15803d; }
+    .btn:hover { background: var(--teal); }
+    .btn::before { content: '▸ '; }
 
-    /* ── Result boxes ── */
-    .result-box {
+    /* ══════════════════════════════════════════
+       RESULTADOS — monitor de signos vitales
+    ══════════════════════════════════════════ */
+    .vitals-box {
       display: none;
-      margin-top: 20px; padding: 22px;
-      border-radius: 12px; text-align: center;
-      border: 1px solid rgba(0,0,0,.06);
+      margin-top: 18px;
+      border-radius: 4px;
+      border: 1px solid;
+      overflow: hidden;
     }
-    .result-box .value  { font-size: 42px; font-weight: 800; margin-bottom: 4px; }
-    .result-box .label  { font-size: 16px; font-weight: 600; }
-    .result-box .detail { font-size: 13px; margin-top: 8px; opacity: .75; }
-
-    /* ── Cluster badges ── */
-    .cluster-badge {
-      display: inline-block;
-      padding: 3px 10px; border-radius: 20px;
-      font-size: 12px; font-weight: 700;
-      margin: 4px 2px;
+    .vitals-head {
+      padding: 9px 18px;
+      font-family: var(--font-mono);
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .vitals-head .pulse {
+      width: 8px; height: 8px; border-radius: 50%;
+      animation: pulse 1.4s ease-in-out infinite;
+    }
+    @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .35; } }
+    .vitals-body { padding: 22px; text-align: center; background: white; }
+    .vitals-body .value {
+      font-family: var(--font-mono);
+      font-size: 46px;
+      font-weight: 800;
+      line-height: 1;
+      letter-spacing: -.02em;
+    }
+    .vitals-body .label { font-size: 15px; font-weight: 700; margin-top: 6px; }
+    .vitals-body .detail {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--steel-dark);
+      margin-top: 10px;
     }
 
-    /* ── Centroid table ── */
-    .centroid-table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 12px; }
-    .centroid-table th { background: #f1f5f9; padding: 7px 10px; text-align: left; font-weight: 600; }
-    .centroid-table td { padding: 6px 10px; border-top: 1px solid #f1f5f9; }
+    /* ── Cluster centroid table ── */
+    .centroid-table { width: 100%; border-collapse: collapse; font-size: 12.5px; margin-top: 16px; text-align: left; }
+    .centroid-table th {
+      font-family: var(--font-mono);
+      background: #fafaf7;
+      padding: 8px 12px;
+      font-weight: 600;
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: .03em;
+      color: var(--steel-dark);
+      border-bottom: 1px solid var(--paper-line);
+    }
+    .centroid-table td {
+      padding: 7px 12px;
+      border-bottom: 1px solid var(--paper-line);
+      font-family: var(--font-mono);
+    }
+    .centroid-table tr:last-child td { border-bottom: none; }
 
     /* ── Cluster legend ── */
-    .legend { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 0; }
+    .legend { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
     .legend-item {
-      padding: 12px 14px; border-radius: 10px;
-      border: 1px solid rgba(0,0,0,.06);
-      font-size: 13px;
+      padding: 14px 16px;
+      border-radius: 3px;
+      border: 1px solid var(--paper-line);
+      border-left-width: 4px;
+      font-size: 12.5px;
+      background: #fafaf7;
     }
-    .legend-item strong { display: block; margin-bottom: 3px; }
+    .legend-item strong {
+      display: block; margin-bottom: 4px; font-size: 13px;
+    }
+    .legend-item .count {
+      display: block; margin-top: 6px;
+      font-family: var(--font-mono);
+      font-size: 10.5px;
+      color: var(--steel-dark);
+    }
 
-    .error-msg { color: #dc2626; font-size: 13px; margin-top: 10px; text-align: center; }
+    .metric-strip {
+      display: flex; gap: 22px; flex-wrap: wrap;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--steel-dark);
+      margin-top: 14px;
+      padding-top: 14px;
+      border-top: 1px dashed var(--paper-line);
+    }
+    .metric-strip strong { color: var(--ink); }
+
+    .error-msg {
+      color: var(--triage-red);
+      font-family: var(--font-mono);
+      font-size: 12px;
+      margin-top: 10px;
+      text-align: center;
+    }
+
+    @media (max-width: 760px) {
+      .shell { grid-template-columns: 1fr; }
+      nav.ward { display: flex; overflow-x: auto; padding: 14px 16px; border-right: none; border-bottom: 1px solid var(--paper-line); gap: 4px; }
+      .ward-label, .ward-meta { display: none; }
+      .ward-btn { white-space: nowrap; border-left: none; border-bottom: 3px solid transparent; padding: 10px 16px; }
+      .ward-btn.active { border-left: none; border-bottom-color: var(--teal); }
+      .grid { grid-template-columns: 1fr; }
+      main { padding: 20px 16px 40px; }
+    }
   </style>
 </head>
 <body>
 
 <header>
-  <h1>🏥 REM 20 — Análisis Predictivo Hospitalario</h1>
-  <p>Ministerio de Salud de Chile · Minería de Datos BIY7121</p>
+  <div class="header-inner">
+    <div class="header-top">
+      <span class="header-id">FICHA N° REM-20 · SISTEMA DE APOYO A LA DECISIÓN</span>
+    </div>
+    <h1>Estación de Análisis <span class="rx">℞</span> Hospitalario</h1>
+    <p class="sub">MINISTERIO DE SALUD DE CHILE — RED ASISTENCIAL · MINERÍA DE DATOS BIY7121</p>
+  </div>
+  <div class="ecg-wrap">
+    <svg viewBox="0 0 1000 60" preserveAspectRatio="none">
+      <path class="ecg-line" d="M0,30 L60,30 L75,30 L85,10 L95,50 L105,30 L160,30 L175,30 L185,15 L195,45 L205,30 L260,30
+                                 L500,30 L560,30 L575,30 L585,10 L595,50 L605,30 L660,30 L675,30 L685,15 L695,45 L705,30 L760,30
+                                 L1000,30" />
+    </svg>
+  </div>
 </header>
 
-<div class="tabs">
-  <button class="tab-btn active" onclick="switchTab('regression', this)">
-    📈 Predicción de Ocupación
-  </button>
-  <button class="tab-btn" onclick="switchTab('cluster', this)">
-    🔵 Clasificación de Patrón Operativo
-  </button>
+<div class="shell">
+
+  <nav class="ward">
+    <div class="ward-label">Módulos</div>
+    <button class="ward-btn active" onclick="switchTab('regression', this)">
+      <span class="dot"></span> Predicción de Ocupación
+    </button>
+    <button class="ward-btn" onclick="switchTab('cluster', this)">
+      <span class="dot"></span> Patrón Operativo
+    </button>
+    <div class="ward-meta">
+      MODELO 1<br><strong>Random Forest</strong><br>Regresión continua<br><br>
+      MODELO 2<br><strong>K-Means (K=4)</strong><br>Clustering no supervisado
+    </div>
+  </nav>
+
+  <main>
+
+    <!-- ══════════════ PANEL 1 — REGRESIÓN ══════════════ -->
+    <div id="panel-regression" class="panel active">
+
+      <div class="chart">
+        <div class="chart-head">
+          <h2>Predictor de Índice Ocupacional</h2>
+          <span class="tag">RANDOM FOREST</span>
+        </div>
+        <div class="chart-body">
+          <div class="grid">
+
+            <div class="section-divider">Identificación</div>
+
+            <div class="field full">
+              <label>Área Funcional</label>
+              <select id="r_AREA_FUNCIONAL">
+                {% for a in categories.AREA_FUNCIONAL %}
+                  <option value="{{ a }}">{{ a }}</option>
+                {% endfor %}
+              </select>
+            </div>
+
+            <div class="field full">
+              <label>Establecimiento</label>
+              <select id="r_ESTABLECIMIENTO">
+                {% for e in categories.ESTABLECIMIENTO %}
+                  <option value="{{ e }}">{{ e }}</option>
+                {% endfor %}
+              </select>
+            </div>
+
+            <div class="field">
+              <label>Período (Año)</label>
+              <input type="number" id="r_PERIODO" value="2024" min="2014" max="2030">
+            </div>
+
+            <div class="field">
+              <label>Mes</label>
+              <select id="r_MES">
+                {% for m in range(1,13) %}
+                  <option value="{{ m }}">{{ m }}</option>
+                {% endfor %}
+              </select>
+            </div>
+
+            <div class="field">
+              <label>Tipo Pertenencia</label>
+              <select id="r_TIPO_PERTENENCIA">
+                <option value="1">1 — Perteneciente SNSS</option>
+                <option value="2">2 — No perteneciente</option>
+              </select>
+            </div>
+
+            <div class="section-divider">Camas</div>
+
+            <div class="field">
+              <label>Días Camas Ocupadas</label>
+              <input type="number" id="r_DIAS_CAMAS_OCUPADAS" value="620">
+            </div>
+            <div class="field">
+              <label>Días Camas Disponibles</label>
+              <input type="number" id="r_DIAS_CAMAS_DISPONIBLES" value="744">
+            </div>
+            <div class="field">
+              <label>Promedio Camas Disponibles</label>
+              <input type="number" step="0.1" id="r_PROMEDIO_CAMAS_DISPONIBLE" value="24">
+            </div>
+
+            <div class="section-divider">Pacientes</div>
+
+            <div class="field">
+              <label>Días de Estada</label>
+              <input type="number" id="r_DIAS_ESTADA" value="640">
+            </div>
+            <div class="field">
+              <label>Promedio Días de Estada</label>
+              <input type="number" step="0.1" id="r_PROMEDIO_DIAS_ESTADA" value="8.5">
+            </div>
+            <div class="field">
+              <label>Número de Egresos</label>
+              <input type="number" id="r_NUMERO_EGRESOS" value="75">
+            </div>
+            <div class="field">
+              <label>Egresos Fallecidos</label>
+              <input type="number" id="r_EGRESOS_FALLECIDOS" value="2">
+            </div>
+            <div class="field">
+              <label>Traslados</label>
+              <input type="number" id="r_TRASLADOS" value="5">
+            </div>
+            <div class="field">
+              <label>Letalidad (%)</label>
+              <input type="number" step="0.01" id="r_LETALIDAD" value="2.67">
+            </div>
+            <div class="field">
+              <label>Índice de Rotación</label>
+              <input type="number" step="0.01" id="r_INDICE_ROTACION" value="3.1">
+            </div>
+          </div>
+
+          <button class="btn" onclick="predictRegression()">Ejecutar Predicción</button>
+          <div class="error-msg" id="r_error"></div>
+
+          <div class="vitals-box" id="r_result">
+            <div class="vitals-head" id="r_vitals_head">
+              <span class="pulse" id="r_pulse"></span>
+              <span id="r_status_text">RESULTADO DEL ANÁLISIS</span>
+            </div>
+            <div class="vitals-body">
+              <div class="value" id="r_value"></div>
+              <div class="label" id="r_label"></div>
+              <div class="detail">ÍNDICE OCUPACIONAL PREDICHO · RANDOM FOREST REGRESSOR</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /panel-regression -->
+
+
+    <!-- ══════════════ PANEL 2 — CLUSTERING ══════════════ -->
+    <div id="panel-cluster" class="panel">
+
+      <div class="chart">
+        <div class="chart-head">
+          <h2>Clasificador de Patrón Operativo</h2>
+          <span class="tag">K-MEANS · K=4</span>
+        </div>
+        <div class="chart-body">
+          <div class="grid">
+
+            <div class="section-divider">Indicadores Operativos</div>
+
+            <div class="field">
+              <label>Índice Ocupacional (%)</label>
+              <input type="number" step="0.1" id="k_INDICE_OCUPACIONAL" value="77">
+            </div>
+            <div class="field">
+              <label>Promedio Días de Estada</label>
+              <input type="number" step="0.1" id="k_PROMEDIO_DIAS_ESTADA" value="7">
+            </div>
+            <div class="field">
+              <label>Índice de Rotación</label>
+              <input type="number" step="0.01" id="k_INDICE_ROTACION" value="3.2">
+            </div>
+            <div class="field">
+              <label>Número de Egresos</label>
+              <input type="number" id="k_NUMERO_EGRESOS" value="70">
+            </div>
+            <div class="field">
+              <label>Promedio Camas Disponibles</label>
+              <input type="number" step="0.1" id="k_PROMEDIO_CAMAS_DISPONIBLE" value="22">
+            </div>
+            <div class="field">
+              <label>Letalidad (%)</label>
+              <input type="number" step="0.01" id="k_LETALIDAD" value="2.5">
+            </div>
+            <div class="field">
+              <label>Mes</label>
+              <select id="k_MES">
+                {% for m in range(1,13) %}
+                  <option value="{{ m }}">{{ m }}</option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+
+          <button class="btn" onclick="predictCluster()">Clasificar Patrón</button>
+          <div class="error-msg" id="k_error"></div>
+
+          <div class="vitals-box" id="k_result">
+            <div class="vitals-head" id="k_vitals_head">
+              <span class="pulse" id="k_pulse"></span>
+              <span id="k_status_text">CLASIFICACIÓN ASIGNADA</span>
+            </div>
+            <div class="vitals-body">
+              <div class="value" id="k_icon" style="font-size: 28px;"></div>
+              <div class="label" id="k_name"></div>
+              <div class="detail" id="k_desc" style="text-transform:none; font-family: var(--font-display); font-size: 13px; margin-top: 8px;"></div>
+              <table class="centroid-table" id="k_centroid_table" style="display:none;">
+                <thead>
+                  <tr><th>Métrica</th><th>Tu registro</th><th>Centroide</th></tr>
+                </thead>
+                <tbody id="k_centroid_body"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="chart">
+        <div class="chart-head">
+          <h2>Referencia de Clusters</h2>
+          <span class="tag">PERFILES</span>
+        </div>
+        <div class="chart-body">
+          <div class="legend">
+            {% for c in ['0','1','2','3'] %}
+            <div class="legend-item" style="border-left-color: {{ km_meta.cluster_colors[c] }}">
+              <strong style="color:{{ km_meta.cluster_colors[c] }}">
+                Cluster {{ c }} — {{ km_meta.cluster_names[c] }}
+              </strong>
+              {{ km_meta.get('cluster_desc', {}).get(c, '') }}
+              <span class="count">{{ km_meta.cluster_sizes[c] }} REGISTROS EN EL DATASET</span>
+            </div>
+            {% endfor %}
+          </div>
+          <div class="metric-strip">
+            <span>SILHOUETTE: <strong>{{ km_meta.silhouette_score }}</strong></span>
+            <span>DAVIES-BOULDIN: <strong>{{ km_meta.get('davies_bouldin', 'N/A') }}</strong></span>
+            <span>CALINSKI-HARABASZ: <strong>{{ km_meta.get('calinski_harabasz', 'N/A') }}</strong></span>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /panel-cluster -->
+
+  </main>
 </div>
-
-<!-- ══════════════════════════════════════════════════════
-     TAB 1 — REGRESSION
-══════════════════════════════════════════════════════ -->
-<div id="tab-regression" class="tab-content active">
-
-  <div class="card">
-    <h2>Predictor de Índice Ocupacional — Random Forest</h2>
-    <div class="grid">
-
-      <div class="section-divider">Identificación</div>
-
-      <div class="field full">
-        <label>Área Funcional</label>
-        <select id="r_AREA_FUNCIONAL">
-          {% for a in categories.AREA_FUNCIONAL %}
-            <option value="{{ a }}">{{ a }}</option>
-          {% endfor %}
-        </select>
-      </div>
-
-      <div class="field full">
-        <label>Establecimiento</label>
-        <select id="r_ESTABLECIMIENTO">
-          {% for e in categories.ESTABLECIMIENTO %}
-            <option value="{{ e }}">{{ e }}</option>
-          {% endfor %}
-        </select>
-      </div>
-
-      <div class="field">
-        <label>Período (Año)</label>
-        <input type="number" id="r_PERIODO" value="2024" min="2014" max="2030">
-      </div>
-
-      <div class="field">
-        <label>Mes</label>
-        <select id="r_MES">
-          {% for m in range(1,13) %}
-            <option value="{{ m }}">{{ m }}</option>
-          {% endfor %}
-        </select>
-      </div>
-
-      <div class="field">
-        <label>Tipo Pertenencia</label>
-        <select id="r_TIPO_PERTENENCIA">
-          <option value="1">1 — Perteneciente SNSS</option>
-          <option value="2">2 — No perteneciente</option>
-        </select>
-      </div>
-
-      <div class="section-divider">Camas</div>
-
-      <div class="field">
-        <label>Días Camas Ocupadas</label>
-        <input type="number" id="r_DIAS_CAMAS_OCUPADAS" value="620">
-      </div>
-      <div class="field">
-        <label>Días Camas Disponibles</label>
-        <input type="number" id="r_DIAS_CAMAS_DISPONIBLES" value="744">
-      </div>
-      <div class="field">
-        <label>Promedio Camas Disponibles</label>
-        <input type="number" step="0.1" id="r_PROMEDIO_CAMAS_DISPONIBLE" value="24">
-      </div>
-
-      <div class="section-divider">Pacientes</div>
-
-      <div class="field">
-        <label>Días de Estada</label>
-        <input type="number" id="r_DIAS_ESTADA" value="640">
-      </div>
-      <div class="field">
-        <label>Promedio Días de Estada</label>
-        <input type="number" step="0.1" id="r_PROMEDIO_DIAS_ESTADA" value="8.5">
-      </div>
-      <div class="field">
-        <label>Número de Egresos</label>
-        <input type="number" id="r_NUMERO_EGRESOS" value="75">
-      </div>
-      <div class="field">
-        <label>Egresos Fallecidos</label>
-        <input type="number" id="r_EGRESOS_FALLECIDOS" value="2">
-      </div>
-      <div class="field">
-        <label>Traslados</label>
-        <input type="number" id="r_TRASLADOS" value="5">
-      </div>
-      <div class="field">
-        <label>Letalidad (%)</label>
-        <input type="number" step="0.01" id="r_LETALIDAD" value="2.67">
-      </div>
-      <div class="field">
-        <label>Índice de Rotación</label>
-        <input type="number" step="0.01" id="r_INDICE_ROTACION" value="3.1">
-      </div>
-    </div>
-
-    <button class="btn" onclick="predictRegression()">Predecir Índice Ocupacional</button>
-    <div class="error-msg" id="r_error"></div>
-  </div>
-
-  <div class="result-box" id="r_result">
-    <div class="value" id="r_value"></div>
-    <div class="label" id="r_label"></div>
-    <div class="detail">Índice Ocupacional Predicho — Random Forest Regressor</div>
-  </div>
-
-</div><!-- /tab-regression -->
-
-
-<!-- ══════════════════════════════════════════════════════
-     TAB 2 — CLUSTERING
-══════════════════════════════════════════════════════ -->
-<div id="tab-cluster" class="tab-content">
-
-  <div class="card">
-    <h2>Clasificador de Patrón Operativo — K-Means (K=4)</h2>
-    <div class="grid">
-
-      <div class="section-divider">Indicadores Operativos</div>
-
-      <div class="field">
-        <label>Índice Ocupacional (%)</label>
-        <input type="number" step="0.1" id="k_INDICE_OCUPACIONAL" value="77">
-      </div>
-      <div class="field">
-        <label>Promedio Días de Estada</label>
-        <input type="number" step="0.1" id="k_PROMEDIO_DIAS_ESTADA" value="7">
-      </div>
-      <div class="field">
-        <label>Índice de Rotación</label>
-        <input type="number" step="0.01" id="k_INDICE_ROTACION" value="3.2">
-      </div>
-      <div class="field">
-        <label>Número de Egresos</label>
-        <input type="number" id="k_NUMERO_EGRESOS" value="70">
-      </div>
-      <div class="field">
-        <label>Promedio Camas Disponibles</label>
-        <input type="number" step="0.1" id="k_PROMEDIO_CAMAS_DISPONIBLE" value="22">
-      </div>
-      <div class="field">
-        <label>Letalidad (%)</label>
-        <input type="number" step="0.01" id="k_LETALIDAD" value="2.5">
-      </div>
-      <div class="field">
-        <label>Mes</label>
-        <select id="k_MES">
-          {% for m in range(1,13) %}
-            <option value="{{ m }}">{{ m }}</option>
-          {% endfor %}
-        </select>
-      </div>
-    </div>
-
-    <button class="btn green" onclick="predictCluster()">Clasificar Patrón Operativo</button>
-    <div class="error-msg" id="k_error"></div>
-  </div>
-
-  <div class="result-box" id="k_result">
-    <div class="value" id="k_icon"></div>
-    <div class="label" id="k_name"></div>
-    <div class="detail" id="k_desc"></div>
-    <table class="centroid-table" id="k_centroid_table">
-      <thead>
-        <tr>
-          <th>Métrica</th>
-          <th>Tu registro</th>
-          <th>Centroide del cluster</th>
-        </tr>
-      </thead>
-      <tbody id="k_centroid_body"></tbody>
-    </table>
-  </div>
-
-  <!-- Cluster legend always visible -->
-  <div class="card">
-    <h2>Referencia de Clusters</h2>
-    <div class="legend">
-      {% for c in ['0','1','2','3'] %}
-      <div class="legend-item" style="background:{{ km_meta.cluster_colors[c] }}22; border-color: {{ km_meta.cluster_colors[c] }}44">
-        <strong style="color:{{ km_meta.cluster_colors[c] }}">
-          Cluster {{ c }} — {{ km_meta.cluster_names[c] }}
-        </strong>
-        {{ km_meta.get('cluster_desc', {}).get(c, '') }}
-        <br><small style="color:#64748b">{{ km_meta.cluster_sizes[c] }} registros en el dataset</small>
-      </div>
-      {% endfor %}
-    </div>
-    <p style="font-size:12px; color:#94a3b8; margin-top:12px;">
-      Silhouette Score: <strong>{{ km_meta.silhouette_score }}</strong> &nbsp;·&nbsp;
-      Davies-Bouldin: <strong>{{ km_meta.get('davies_bouldin', 'N/A') }}</strong> &nbsp;·&nbsp;
-      Calinski-Harabasz: <strong>{{ km_meta.get('calinski_harabasz', 'N/A') }}</strong>
-    </p>
-  </div>
-
-</div><!-- /tab-cluster -->
 
 
 <script>
-  // ── Tab switching ──────────────────────────────────────────
   function switchTab(name, btn) {
-    document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
-    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-    document.getElementById('tab-' + name).classList.add('active');
+    document.querySelectorAll('.panel').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.ward-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById('panel-' + name).classList.add('active');
     btn.classList.add('active');
   }
 
-  // ── Regression prediction ──────────────────────────────────
+  // ── Triage color mapping (consistent with backend alert_level) ──
+  const TRIAGE = {
+    'Normal':   { bg: '#ecfdf3', border: '#16a34a', text: '#15803d' },
+    'Alerta':   { bg: '#fffbeb', border: '#d97706', text: '#92610a' },
+    'Crítico':  { bg: '#fef2f2', border: '#dc2626', text: '#b91c1c' },
+  };
+
   async function predictRegression() {
     document.getElementById('r_error').textContent = '';
     document.getElementById('r_result').style.display = 'none';
@@ -515,17 +824,25 @@ HTML_TEMPLATE = """
     const res  = await fetch('/predict/regression', { method: 'POST', body: fd });
     const data = await res.json();
 
-    if (data.error) { document.getElementById('r_error').textContent = 'Error: ' + data.error; return; }
+    if (data.error) { document.getElementById('r_error').textContent = 'ERROR: ' + data.error; return; }
 
+    const t = TRIAGE[data.alert_level] || TRIAGE['Normal'];
     const box = document.getElementById('r_result');
-    box.style.display    = 'block';
-    box.style.background = data.bg_color;
-    box.style.color      = data.text_color;
-    document.getElementById('r_value').textContent = data.icon + ' ' + data.prediction + '%';
-    document.getElementById('r_label').textContent = 'Nivel de Alerta: ' + data.alert_level;
+    box.style.display = 'block';
+    box.style.borderColor = t.border;
+
+    const head = document.getElementById('r_vitals_head');
+    head.style.background = t.bg;
+    head.style.color = t.text;
+    document.getElementById('r_pulse').style.background = t.border;
+    document.getElementById('r_status_text').textContent = 'NIVEL DE ALERTA: ' + data.alert_level.toUpperCase();
+
+    document.getElementById('r_value').style.color = t.border;
+    document.getElementById('r_value').textContent = data.prediction + '%';
+    document.getElementById('r_label').textContent = data.icon + ' ' + data.alert_level;
+    document.getElementById('r_label').style.color = t.text;
   }
 
-  // ── Clustering prediction ──────────────────────────────────
   const KM_FEATURE_LABELS = {
     'INDICE_OCUPACIONAL':        'Índice Ocupacional (%)',
     'PROMEDIO_DIAS_ESTADA':      'Promedio Días Estada',
@@ -548,21 +865,24 @@ HTML_TEMPLATE = """
     const res  = await fetch('/predict/cluster', { method: 'POST', body: fd });
     const data = await res.json();
 
-    if (data.error) { document.getElementById('k_error').textContent = 'Error: ' + data.error; return; }
+    if (data.error) { document.getElementById('k_error').textContent = 'ERROR: ' + data.error; return; }
 
     const box = document.getElementById('k_result');
-    box.style.display    = 'block';
-    box.style.background = data.color + '22';
-    box.style.borderColor = data.color + '55';
-    box.style.color      = '#1e293b';
+    box.style.display = 'block';
+    box.style.borderColor = data.color;
 
-    document.getElementById('k_icon').textContent = 'Cluster ' + data.cluster;
+    const head = document.getElementById('k_vitals_head');
+    head.style.background = data.color + '18';
+    head.style.color = data.color;
+    document.getElementById('k_pulse').style.background = data.color;
+    document.getElementById('k_status_text').textContent = 'CLUSTER ' + data.cluster + ' ASIGNADO';
+
+    document.getElementById('k_icon').textContent = '● Cluster ' + data.cluster;
     document.getElementById('k_icon').style.color = data.color;
     document.getElementById('k_name').textContent = data.name;
     document.getElementById('k_name').style.color = data.color;
     document.getElementById('k_desc').textContent = data.description;
 
-    // Centroid comparison table
     const tbody = document.getElementById('k_centroid_body');
     tbody.innerHTML = '';
     for (const f of features) {
