@@ -1,20 +1,3 @@
-"""
-app.py — REM 20 · Capa de rutas Flask
-=====================================================
-Este archivo SOLO contiene rutas HTTP. Toda la lógica de:
-  - Carga y predicción de modelos       → ml_models.py
-  - Lectura de CSV/Excel y export       → data_io.py
-  - Presentación (HTML/CSS/JS)          → templates/ + static/
-
-Así cada pieza se puede editar, testear o reemplazar sin tocar
-las demás.
-
-Run:
-  pip install -r requirements-prod.txt
-  python app.py
-  → http://localhost:5000
-"""
-
 import uuid
 from flask import Flask, request, render_template, jsonify, send_file
 
@@ -25,20 +8,12 @@ from data_io import (
 )
 
 app = Flask(__name__)
+amodels = RemModels()
 
-# Carga todos los modelos UNA vez al iniciar el servidor
-models = RemModels()
 
-# Cache en memoria de los últimos lotes procesados, para que
-# /batch/export pueda generar el archivo sin re-subir el CSV.
-# token -> DataFrame de resultados
 _batch_cache: dict[str, "object"] = {}
-_BATCH_CACHE_MAX = 20  # evita crecimiento indefinido en sesiones largas
+_BATCH_CACHE_MAX = 20  
 
-
-# ════════════════════════════════════════════════════════════
-#  PÁGINA PRINCIPAL
-# ════════════════════════════════════════════════════════════
 @app.route('/')
 def index():
     return render_template(
@@ -47,10 +22,6 @@ def index():
         km_meta=models.km_meta,
     )
 
-
-# ════════════════════════════════════════════════════════════
-#  PREDICCIÓN INDIVIDUAL
-# ════════════════════════════════════════════════════════════
 @app.route('/predict/regression', methods=['POST'])
 def predict_regression():
     try:
