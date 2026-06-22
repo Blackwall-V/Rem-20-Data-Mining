@@ -77,12 +77,22 @@ class RemModels:
     # ──────────────────────────────────────────────────────────
     def _preprocess_regression(self, row: dict) -> np.ndarray:
         """Replica el pipeline del notebook: winsorize -> encode -> scale."""
+        dias_ocupadas    = float(row['DIAS_CAMAS_OCUPADAS'])
+        dias_disponibles = float(row['DIAS_CAMAS_DISPONIBLES'])
+
+        # INDICE_OCUPACIONAL fue incluido como feature en el notebook.
+        # Como no es un input del formulario (es lo que se predice), lo
+        # reconstruimos desde los campos disponibles para que el modelo
+        # no reciba siempre 0 en esa columna.
+        indice_ocup = (dias_ocupadas / dias_disponibles * 100) if dias_disponibles > 0 else 0.0
+        indice_ocup = min(indice_ocup, 100.0)
+
         raw = pd.DataFrame([{
             'PERIODO':                   float(row['PERIODO']),
             'TIPO_PERTENENCIA':          float(row['TIPO_PERTENENCIA']),
             'MES':                       float(row['MES']),
-            'DIAS_CAMAS_OCUPADAS':       float(row['DIAS_CAMAS_OCUPADAS']),
-            'DIAS_CAMAS_DISPONIBLES':    float(row['DIAS_CAMAS_DISPONIBLES']),
+            'DIAS_CAMAS_OCUPADAS':       dias_ocupadas,
+            'DIAS_CAMAS_DISPONIBLES':    dias_disponibles,
             'DIAS_ESTADA':               float(row['DIAS_ESTADA']),
             'NUMERO_EGRESOS':            float(row['NUMERO_EGRESOS']),
             'EGRESOS_FALLECIDOS':        float(row['EGRESOS_FALLECIDOS']),
@@ -91,6 +101,7 @@ class RemModels:
             'PROMEDIO_DIAS_ESTADA':      float(row['PROMEDIO_DIAS_ESTADA']),
             'LETALIDAD':                 float(row['LETALIDAD']),
             'INDICE_ROTACION':           float(row['INDICE_ROTACION']),
+            'INDICE_OCUPACIONAL':        indice_ocup,
             'AREA_FUNCIONAL':            str(row['AREA_FUNCIONAL']),
             'ESTABLECIMIENTO':           str(row['ESTABLECIMIENTO']),
         }])
