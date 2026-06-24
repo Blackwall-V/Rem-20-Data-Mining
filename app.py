@@ -8,7 +8,7 @@ from data_io import (
 )
 
 app = Flask(__name__)
-amodels = RemModels()
+models = RemModels()
 
 
 _batch_cache: dict[str, "object"] = {}
