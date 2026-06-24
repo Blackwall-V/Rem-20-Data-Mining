@@ -233,3 +233,119 @@ function exportReport(format) {
   }
   window.location.href = `/batch/export/${format}?token=${lastBatchToken}`;
 }
+
+// ════════════════════════════════════════════════════════════
+//  EJEMPLOS PRECARGADOS — datos reales del dataset REM 20
+// ════════════════════════════════════════════════════════════
+
+const REGRESSION_EXAMPLES = [
+  {
+    _label: 'Normal — Hospital Angol, Neonatología Intermedios, Sep 2014',
+    PERIODO: 2014, MES: 9, TIPO_PERTENENCIA: 1,
+    AREA_FUNCIONAL: 'Área Neonatología Cuidados Intermedios ',
+    ESTABLECIMIENTO: 'Hospital Dr Mauricio Heyermann (Angol)',
+    DIAS_CAMAS_OCUPADAS: 42, DIAS_CAMAS_DISPONIBLES: 90, DIAS_ESTADA: 40,
+    NUMERO_EGRESOS: 7, EGRESOS_FALLECIDOS: 0, TRASLADOS: 6,
+    PROMEDIO_CAMAS_DISPONIBLE: 3.0, PROMEDIO_DIAS_ESTADA: 5.7,
+    LETALIDAD: 0.00, INDICE_ROTACION: 2.33,
+  },
+  {
+    _label: 'Alerta — Hospital Villarrica, Med-Quirúrgico Pediátrico, Dic 2016',
+    PERIODO: 2016, MES: 12, TIPO_PERTENENCIA: 1,
+    AREA_FUNCIONAL: 'Área Médico-Quirúrgico Pediátrica Cuidados Básicos ',
+    ESTABLECIMIENTO: 'Hospital de Villarrica',
+    DIAS_CAMAS_OCUPADAS: 235, DIAS_CAMAS_DISPONIBLES: 304, DIAS_ESTADA: 227,
+    NUMERO_EGRESOS: 70, EGRESOS_FALLECIDOS: 0, TRASLADOS: 0,
+    PROMEDIO_CAMAS_DISPONIBLE: 9.8, PROMEDIO_DIAS_ESTADA: 3.2,
+    LETALIDAD: 0.00, INDICE_ROTACION: 7.14,
+  },
+  {
+    _label: 'Crítico C0 — C.H. San José, Med-Quirúrgico Básico, Dic 2021',
+    PERIODO: 2021, MES: 12, TIPO_PERTENENCIA: 1,
+    AREA_FUNCIONAL: 'Área Médico-Quirúrgico Cuidados Básicos ',
+    ESTABLECIMIENTO: 'Complejo Hospitalario San José (Santiago, Independencia)',
+    DIAS_CAMAS_OCUPADAS: 5873, DIAS_CAMAS_DISPONIBLES: 6324, DIAS_ESTADA: 6127,
+    NUMERO_EGRESOS: 617, EGRESOS_FALLECIDOS: 10, TRASLADOS: 140,
+    PROMEDIO_CAMAS_DISPONIBLE: 162.2, PROMEDIO_DIAS_ESTADA: 8.5,
+    LETALIDAD: 1.39, INDICE_ROTACION: 3.54,
+  },
+  {
+    _label: 'Crítico C3 — H. La Florida, Neonatología Intensivos, Feb 2018',
+    PERIODO: 2018, MES: 2, TIPO_PERTENENCIA: 1,
+    AREA_FUNCIONAL: 'Área Neonatología Cuidados Intensivos ',
+    ESTABLECIMIENTO: 'Hospital Clínico Metropolitano La Florida Dra. Eloisa Díaz Inzunza',
+    DIAS_CAMAS_OCUPADAS: 141, DIAS_CAMAS_DISPONIBLES: 173, DIAS_ESTADA: 175,
+    NUMERO_EGRESOS: 4, EGRESOS_FALLECIDOS: 3, TRASLADOS: 15,
+    PROMEDIO_CAMAS_DISPONIBLE: 6.2, PROMEDIO_DIAS_ESTADA: 43.8,
+    LETALIDAD: 75.00, INDICE_ROTACION: 0.65,
+  },
+];
+
+const CLUSTER_EXAMPLES = [
+  {
+    _label: 'C2 — Baja presión: Neonatología pequeña, ocupación ~47%',
+    INDICE_OCUPACIONAL: 46.7, PROMEDIO_DIAS_ESTADA: 5.7,
+    INDICE_ROTACION: 2.33, NUMERO_EGRESOS: 7,
+    PROMEDIO_CAMAS_DISPONIBLE: 3.0, LETALIDAD: 0.00, MES: 9,
+  },
+  {
+    _label: 'C1 — Operación típica: Med-Quirúrgico Pediátrico, ocupación ~77%',
+    INDICE_OCUPACIONAL: 77.3, PROMEDIO_DIAS_ESTADA: 3.2,
+    INDICE_ROTACION: 7.14, NUMERO_EGRESOS: 70,
+    PROMEDIO_CAMAS_DISPONIBLE: 9.8, LETALIDAD: 0.00, MES: 12,
+  },
+  {
+    _label: 'C0 — Alta ocupación hospital grande: ocupación ~93%, 617 egresos',
+    INDICE_OCUPACIONAL: 92.9, PROMEDIO_DIAS_ESTADA: 8.5,
+    INDICE_ROTACION: 3.54, NUMERO_EGRESOS: 617,
+    PROMEDIO_CAMAS_DISPONIBLE: 162.2, LETALIDAD: 1.39, MES: 12,
+  },
+  {
+    _label: 'C3 — UCI / Alta complejidad: estada 44 días, letalidad 75%',
+    INDICE_OCUPACIONAL: 81.5, PROMEDIO_DIAS_ESTADA: 43.8,
+    INDICE_ROTACION: 0.65, NUMERO_EGRESOS: 4,
+    PROMEDIO_CAMAS_DISPONIBLE: 6.2, LETALIDAD: 75.00, MES: 2,
+  },
+];
+
+function loadRegressionExample(idx) {
+  const ex = REGRESSION_EXAMPLES[idx];
+  const numFields = [
+    'PERIODO','MES','TIPO_PERTENENCIA','DIAS_CAMAS_OCUPADAS','DIAS_CAMAS_DISPONIBLES',
+    'DIAS_ESTADA','NUMERO_EGRESOS','EGRESOS_FALLECIDOS','TRASLADOS',
+    'PROMEDIO_CAMAS_DISPONIBLE','PROMEDIO_DIAS_ESTADA','LETALIDAD','INDICE_ROTACION',
+  ];
+  const selFields = ['AREA_FUNCIONAL','ESTABLECIMIENTO'];
+
+  for (const f of numFields) {
+    const el = document.getElementById('r_' + f);
+    if (el) el.value = ex[f];
+  }
+  for (const f of selFields) {
+    const el = document.getElementById('r_' + f);
+    if (!el) continue;
+    // find matching option (trim spaces since dataset has trailing spaces)
+    const target = ex[f].trim();
+    for (const opt of el.options) {
+      if (opt.value.trim() === target) { el.value = opt.value; break; }
+    }
+  }
+
+  // hide previous result so user sees the change
+  document.getElementById('r_result').style.display = 'none';
+  document.getElementById('r_error').textContent = '';
+}
+
+function loadClusterExample(idx) {
+  const ex = CLUSTER_EXAMPLES[idx];
+  const fields = [
+    'INDICE_OCUPACIONAL','PROMEDIO_DIAS_ESTADA','INDICE_ROTACION',
+    'NUMERO_EGRESOS','PROMEDIO_CAMAS_DISPONIBLE','LETALIDAD','MES',
+  ];
+  for (const f of fields) {
+    const el = document.getElementById('k_' + f);
+    if (el) el.value = ex[f];
+  }
+  document.getElementById('k_result').style.display = 'none';
+  document.getElementById('k_error').textContent = '';
+}
