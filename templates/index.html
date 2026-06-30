@@ -31,18 +31,14 @@
 
   <nav class="ward">
     <div class="ward-label">Módulos</div>
-    <button class="ward-btn active" onclick="switchTab('regression', this)">
-      <span class="dot"></span> Predicción Individual
-    </button>
-    <button class="ward-btn" onclick="switchTab('cluster', this)">
+    <button class="ward-btn active" onclick="switchTab('cluster', this)">
       <span class="dot"></span> Patrón Operativo
     </button>
     <button class="ward-btn" onclick="switchTab('batch', this)">
       <span class="dot"></span> Importar / Exportar
     </button>
     <div class="ward-meta">
-      MODELO 1<br><strong>Random Forest</strong><br>Regresión continua<br><br>
-      MODELO 2<br><strong>K-Means (K=4)</strong><br>Clustering no supervisado
+      MODELO<br><strong>K-Means (K=4)</strong><br>Clustering no supervisado
     </div>
   </nav>
 
@@ -51,203 +47,25 @@
     <section class="intro-hero">
       <div class="intro-inner">
         <span class="intro-tag">¿Qué puedo hacer aquí?</span>
-        <h2>Tres herramientas para entender tu hospital</h2>
+        <h2>Dos herramientas para entender tu hospital</h2>
         <div class="intro-grid">
           <div class="intro-card">
             <span class="intro-num">01</span>
-            <h3>Predicción Individual</h3>
-            <p>Escribe los datos de tu hospital este mes y obtén una predicción de ocupación para el próximo período, con nivel de alerta (Normal · Alerta · Crítico).</p>
-          </div>
-          <div class="intro-card">
-            <span class="intro-num">02</span>
             <h3>Patrón Operativo</h3>
             <p>Compara tu hospital con 4 perfiles descubiertos en 160 mil registros: típico, alta ocupación, baja presión o UCI / alta complejidad.</p>
           </div>
           <div class="intro-card">
-            <span class="intro-num">03</span>
+            <span class="intro-num">02</span>
             <h3>Análisis Masivo</h3>
             <p>Sube un archivo CSV o Excel con cientos de registros REM-20 y descarga un reporte Excel o PDF listo para llevar a tu reunión.</p>
           </div>
         </div>
-        <p class="intro-hint">No sabes por dónde empezar? Usa los <strong>ejemplos pre-cargados</strong> en cada módulo para ver el resultado sin escribir nada. Pasa el cursor sobre el ícono <span class="intro-hint-i">ⓘ</span> junto a cada campo si necesitas una definición.</p>
+        <p class="intro-hint">No sabes por dónde empezar? Usa los <strong>ejemplos pre-cargados</strong> en el módulo de Patrón Operativo para ver el resultado sin escribir nada. Pasa el cursor sobre el ícono <span class="intro-hint-i">ⓘ</span> junto a cada campo si necesitas una definición.</p>
       </div>
     </section>
 
-    <!-- ══════════════ PANEL 1 — REGRESIÓN INDIVIDUAL ══════════════ -->
-    <div id="panel-regression" class="panel active">
-
-      <div class="chart">
-        <div class="chart-head">
-          <h2>Predictor de Índice Ocupacional</h2>
-          <span class="tag">RANDOM FOREST</span>
-        </div>
-        <div class="chart-body">
-          <div class="grid">
-
-            <div class="section-divider">Identificación</div>
-
-            <div class="field full">
-              <div class="label-row">
-                <label>Área Funcional</label>
-                <span class="info-i" data-tip="Tipo de área del hospital (ej. pediatría, médico-quirúrgico, UCI, neonatología).">?</span>
-              </div>
-              <select id="r_AREA_FUNCIONAL">
-                {% for a in categories.AREA_FUNCIONAL %}
-                  <option value="{{ a }}">{{ a }}</option>
-                {% endfor %}
-              </select>
-            </div>
-
-            <div class="field full">
-              <div class="label-row">
-                <label>Establecimiento</label>
-                <span class="info-i" data-tip="Hospital o centro de salud que envía los datos.">?</span>
-              </div>
-              <select id="r_ESTABLECIMIENTO">
-                {% for e in categories.ESTABLECIMIENTO %}
-                  <option value="{{ e }}">{{ e }}</option>
-                {% endfor %}
-              </select>
-            </div>
-
-            <div class="field">
-              <div class="label-row">
-                <label>Período (Año)</label>
-                <span class="info-i" data-tip="Año del registro que quieres analizar (ej. 2024).">?</span>
-              </div>
-              <input type="number" id="r_PERIODO" value="2024" min="2014" max="2030">
-            </div>
-
-            <div class="field">
-              <div class="label-row">
-                <label>Mes</label>
-                <span class="info-i" data-tip="Mes del registro (1 = enero, 12 = diciembre).">?</span>
-              </div>
-              <select id="r_MES">
-                {% for m in range(1,13) %}
-                  <option value="{{ m }}">{{ m }}</option>
-                {% endfor %}
-              </select>
-            </div>
-
-            <div class="field">
-              <div class="label-row">
-                <label>Tipo Pertenencia</label>
-                <span class="info-i" data-tip="1 = pertenece al Sistema Nacional de Servicios de Salud (SNSS); 2 = no pertenece.">?</span>
-              </div>
-              <select id="r_TIPO_PERTENENCIA">
-                <option value="1">1 — Perteneciente SNSS</option>
-                <option value="2">2 — No perteneciente</option>
-              </select>
-            </div>
-
-            <div class="section-divider">Camas</div>
-
-            <div class="field">
-              <div class="label-row">
-                <label>Días Camas Ocupadas</label>
-                <span class="info-i" data-tip="Suma de días que cada cama estuvo efectivamente ocupada durante el mes.">?</span>
-              </div>
-              <input type="number" id="r_DIAS_CAMAS_OCUPADAS" value="620">
-            </div>
-            <div class="field">
-              <div class="label-row">
-                <label>Días Camas Disponibles</label>
-                <span class="info-i" data-tip="Suma de días que cada cama estuvo disponible para uso durante el mes.">?</span>
-              </div>
-              <input type="number" id="r_DIAS_CAMAS_DISPONIBLES" value="744">
-            </div>
-            <div class="field">
-              <div class="label-row">
-                <label>Promedio Camas Disponibles</label>
-                <span class="info-i" data-tip="Promedio diario de camas listas para recibir pacientes en el mes.">?</span>
-              </div>
-              <input type="number" step="0.1" id="r_PROMEDIO_CAMAS_DISPONIBLE" value="24">
-            </div>
-
-            <div class="section-divider">Pacientes</div>
-
-            <div class="field">
-              <div class="label-row">
-                <label>Días de Estada</label>
-                <span class="info-i" data-tip="Suma de los días que cada paciente permaneció hospitalizado durante el mes.">?</span>
-              </div>
-              <input type="number" id="r_DIAS_ESTADA" value="640">
-            </div>
-            <div class="field">
-              <div class="label-row">
-                <label>Promedio Días de Estada</label>
-                <span class="info-i" data-tip="Duración promedio de hospitalización por paciente (en días).">?</span>
-              </div>
-              <input type="number" step="0.1" id="r_PROMEDIO_DIAS_ESTADA" value="8.5">
-            </div>
-            <div class="field">
-              <div class="label-row">
-                <label>Número de Egresos</label>
-                <span class="info-i" data-tip="Cantidad de pacientes que salieron del hospital (vivos o fallecidos) durante el mes.">?</span>
-              </div>
-              <input type="number" id="r_NUMERO_EGRESOS" value="75">
-            </div>
-            <div class="field">
-              <div class="label-row">
-                <label>Egresos Fallecidos</label>
-                <span class="info-i" data-tip="De los egresos del mes, cuántos fueron por fallecimiento.">?</span>
-              </div>
-              <input type="number" id="r_EGRESOS_FALLECIDOS" value="2">
-            </div>
-            <div class="field">
-              <div class="label-row">
-                <label>Traslados</label>
-                <span class="info-i" data-tip="Pacientes derivados a otro hospital o centro durante el mes.">?</span>
-              </div>
-              <input type="number" id="r_TRASLADOS" value="5">
-            </div>
-            <div class="field">
-              <div class="label-row">
-                <label>Letalidad (%)</label>
-                <span class="info-i" data-tip="Porcentaje de egresos que terminaron en fallecimiento.">?</span>
-              </div>
-              <input type="number" step="0.01" id="r_LETALIDAD" value="2.67">
-            </div>
-            <div class="field">
-              <div class="label-row">
-                <label>Índice de Rotación</label>
-                <span class="info-i" data-tip="Cuántos pacientes, en promedio, pasaron por cada cama durante el mes.">?</span>
-              </div>
-              <input type="number" step="0.01" id="r_INDICE_ROTACION" value="3.1">
-            </div>
-          </div>
-
-          <div class="examples-strip">
-            <span class="examples-label">Ejemplos reales:</span>
-            <button class="example-btn" onclick="loadRegressionExample(0)">Normal — Angol 2014</button>
-            <button class="example-btn" onclick="loadRegressionExample(1)">Alerta — Villarrica 2016</button>
-            <button class="example-btn" onclick="loadRegressionExample(2)">Crítico — San José 2021</button>
-            <button class="example-btn" onclick="loadRegressionExample(3)">Crítico UCI — La Florida 2018</button>
-          </div>
-
-          <button class="btn" onclick="predictRegression()">Ejecutar Predicción</button>
-          <div class="error-msg" id="r_error"></div>
-
-          <div class="vitals-box" id="r_result">
-            <div class="vitals-head" id="r_vitals_head">
-              <span class="pulse" id="r_pulse"></span>
-              <span id="r_status_text">RESULTADO DEL ANÁLISIS</span>
-            </div>
-            <div class="vitals-body">
-              <div class="value" id="r_value"></div>
-              <div class="label" id="r_label"></div>
-              <div class="detail">ÍNDICE OCUPACIONAL PREDICHO · RANDOM FOREST REGRESSOR</div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-    </div><!-- /panel-regression -->
-
-
-    <!-- ══════════════ PANEL 2 — CLUSTERING ══════════════ -->
-    <div id="panel-cluster" class="panel">
+    <!-- ══════════════ PANEL 1 — CLUSTERING ══════════════ -->
+    <div id="panel-cluster" class="panel active">
 
       <div class="chart">
         <div class="chart-head">
@@ -373,7 +191,7 @@
     </div><!-- /panel-cluster -->
 
 
-    <!-- ══════════════ PANEL 3 — IMPORTAR / EXPORTAR ══════════════ -->
+    <!-- ══════════════ PANEL 2 — IMPORTAR / EXPORTAR ══════════════ -->
     <div id="panel-batch" class="panel">
 
       <div class="chart">
@@ -400,9 +218,9 @@
           <div class="error-msg" id="batch_error"></div>
 
           <p style="font-family: var(--font-mono); font-size: 10.5px; color: var(--steel-dark); margin-top: 14px; line-height: 1.7;">
-            COLUMNAS REQUERIDAS: PERIODO, MES, AREA_FUNCIONAL, ESTABLECIMIENTO,
-            DIAS_CAMAS_OCUPADAS, DIAS_CAMAS_DISPONIBLES, DIAS_ESTADA, NUMERO_EGRESOS,
-            PROMEDIO_CAMAS_DISPONIBLE, PROMEDIO_DIAS_ESTADA, LETALIDAD, INDICE_ROTACION
+            COLUMNAS REQUERIDAS: INDICE_OCUPACIONAL, PROMEDIO_DIAS_ESTADA,
+            INDICE_ROTACION, NUMERO_EGRESOS, PROMEDIO_CAMAS_DISPONIBLE,
+            LETALIDAD, MES
           </p>
         </div>
       </div>

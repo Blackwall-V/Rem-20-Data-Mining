@@ -13,24 +13,14 @@ models = RemModels()
 
 
 _batch_cache: dict[str, "object"] = {}
-_BATCH_CACHE_MAX = 20  
+_BATCH_CACHE_MAX = 20
 
 @app.route('/')
 def index():
     return render_template(
         'index.html',
-        categories=models.categories,
         km_meta=models.km_meta,
     )
-
-@app.route('/predict/regression', methods=['POST'])
-def predict_regression():
-    try:
-        row = {f: request.form.get(f) for f in RemModels.REGRESSION_INPUT_FIELDS}
-        result = models.predict_occupancy(row)
-        return jsonify(result)
-    except Exception as e:
-        return jsonify({'error': str(e)}), 400
 
 
 @app.route('/predict/cluster', methods=['POST'])
@@ -61,27 +51,18 @@ def batch_upload():
             }), 400
 
         rows = dataframe_to_rows(df_raw)
-        df_results = models.predict_full_batch(rows)
+        df_results = models.predict_cluster_batch(rows)
 
-        # Cachear resultados completos para exportación posterior
         token = uuid.uuid4().hex[:12]
         if len(_batch_cache) >= _BATCH_CACHE_MAX:
             _batch_cache.pop(next(iter(_batch_cache)))
         _batch_cache[token] = df_results
 
         valid = df_results[df_results['_error'].isna()] if '_error' in df_results.columns else df_results
-        alert_counts = (
-            valid['NIVEL_ALERTA'].value_counts().to_dict()
-            if 'NIVEL_ALERTA' in valid.columns else {}
-        )
-        avg_occ = (
-            round(float(valid['PREDICCION_OCUPACIONAL'].mean()), 2)
-            if 'PREDICCION_OCUPACIONAL' in valid.columns and len(valid) else None
-        )
         error_count = int(df_results['_error'].notna().sum()) if '_error' in df_results.columns else 0
 
         preview_cols = [c for c in df_results.columns if not c.startswith('_')]
-        priority = ['ESTABLECIMIENTO', 'AREA_FUNCIONAL', 'PREDICCION_OCUPACIONAL', 'NIVEL_ALERTA', 'CLUSTER', 'PATRON_OPERATIVO']
+        priority = ['CLUSTER', 'PATRON_OPERATIVO']
         ordered_cols = [c for c in priority if c in preview_cols] + [c for c in preview_cols if c not in priority]
         preview = df_results[ordered_cols].head(200).fillna('').to_dict(orient='records')
 
@@ -89,8 +70,6 @@ def batch_upload():
             'token': token,
             'total_rows': len(df_results),
             'error_count': error_count,
-            'alert_counts': alert_counts,
-            'avg_occupancy': avg_occ,
             'preview': preview,
         })
 

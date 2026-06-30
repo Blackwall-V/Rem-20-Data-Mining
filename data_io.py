@@ -4,8 +4,8 @@ data_io.py — Importación y exportación de datos
 Toda la lógica de:
   - Leer un CSV/Excel subido por el usuario y convertirlo en filas
     que ml_models.py pueda consumir
-  - Exportar resultados (predicciones de regresión + clustering)
-    a un Excel formateado y a un PDF de reporte ejecutivo
+  - Exportar resultados de clustering a un Excel formateado
+    y a un PDF de reporte ejecutivo
 
 Separado de app.py (rutas) y de ml_models.py (algoritmos) para que
 cada pieza tenga una sola responsabilidad.
@@ -31,10 +31,8 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 
 # Columnas requeridas para que un registro pueda pasar por ambos modelos
 REQUIRED_COLUMNS = [
-    'PERIODO', 'MES', 'AREA_FUNCIONAL', 'ESTABLECIMIENTO',
-    'DIAS_CAMAS_OCUPADAS', 'DIAS_CAMAS_DISPONIBLES', 'DIAS_ESTADA',
-    'NUMERO_EGRESOS', 'PROMEDIO_CAMAS_DISPONIBLE', 'PROMEDIO_DIAS_ESTADA',
-    'LETALIDAD', 'INDICE_ROTACION',
+    'INDICE_OCUPACIONAL', 'PROMEDIO_DIAS_ESTADA', 'INDICE_ROTACION',
+    'NUMERO_EGRESOS', 'PROMEDIO_CAMAS_DISPONIBLE', 'LETALIDAD', 'MES',
 ]
 
 
@@ -92,33 +90,27 @@ TITLE_FONT   = Font(color='0D3B3E', bold=True, size=16, name='Arial')
 SUB_FONT     = Font(color='5C6B6C', size=10, italic=True, name='Arial')
 BORDER_THIN  = Border(*(Side(style='thin', color='E8E3D8') for _ in range(4)))
 
-ALERT_FILLS = {
-    'Normal':  PatternFill('solid', start_color='ECFDF3', end_color='ECFDF3'),
-    'Alerta':  PatternFill('solid', start_color='FFFBEB', end_color='FFFBEB'),
-    'Crítico': PatternFill('solid', start_color='FEF2F2', end_color='FEF2F2'),
-}
-ALERT_FONTS = {
-    'Normal':  Font(color='15803D', bold=True, name='Arial'),
-    'Alerta':  Font(color='92610A', bold=True, name='Arial'),
-    'Crítico': Font(color='B91C1C', bold=True, name='Arial'),
+CLUSTER_FILLS = {
+    'C0': PatternFill('solid', start_color='FFF7ED', end_color='FFF7ED'),
+    'C1': PatternFill('solid', start_color='ECFDF3', end_color='ECFDF3'),
+    'C2': PatternFill('solid', start_color='EFF6FF', end_color='EFF6FF'),
+    'C3': PatternFill('solid', start_color='FEF2F2', end_color='FEF2F2'),
 }
 
 
 def build_excel_report(df_results: pd.DataFrame, km_meta: dict) -> bytes:
     """
-    Construye un Excel de 3 hojas:
+    Construye un Excel de 2 hojas:
       1. Resumen ejecutivo (métricas agregadas + gráficos)
-      2. Detalle de predicciones (tabla completa)
-      3. Perfil de clusters (referencia)
+      2. Detalle de clasificaciones (tabla completa)
     Devuelve los bytes del archivo, listos para enviar como descarga.
     """
     wb = Workbook()
 
-    # ── Hoja 1: Resumen ejecutivo ──────────────────────────────
     ws = wb.active
     ws.title = 'Resumen Ejecutivo'
 
-    ws['B2'] = 'REM 20 — Reporte de Apoyo a la Decisión'
+    ws['B2'] = 'REM 20 — Reporte de Patrones Operativos'
     ws['B2'].font = TITLE_FONT
     ws['B3'] = f"Generado el {datetime.now().strftime('%d-%m-%Y %H:%M')} · {len(df_results)} registros analizados"
     ws['B3'].font = SUB_FONT
@@ -127,13 +119,12 @@ def build_excel_report(df_results: pd.DataFrame, km_meta: dict) -> bytes:
 
     valid = df_results[df_results['_error'].isna()] if '_error' in df_results.columns else df_results
 
-    # KPIs
     kpi_row = 6
     kpis = [
         ('Registros Procesados', len(df_results)),
-        ('Predicción Promedio (%)', round(valid['PREDICCION_OCUPACIONAL'].mean(), 2) if 'PREDICCION_OCUPACIONAL' in valid else 'N/A'),
-        ('En Nivel Crítico', int((valid['NIVEL_ALERTA'] == 'Crítico').sum()) if 'NIVEL_ALERTA' in valid else 'N/A'),
-        ('En Nivel Normal', int((valid['NIVEL_ALERTA'] == 'Normal').sum()) if 'NIVEL_ALERTA' in valid else 'N/A'),
+        ('Patrones Identificados', valid['CLUSTER'].nunique() if 'CLUSTER' in valid.columns else 'N/A'),
+        ('Patrón Más Frecuente', f"C{valid['CLUSTER'].mode().iloc[0]}" if 'CLUSTER' in valid.columns and len(valid) else 'N/A'),
+        ('Errores', int(df_results['_error'].notna().sum()) if '_error' in df_results.columns else 0),
     ]
     for i, (label, value) in enumerate(kpis):
         col = get_column_letter(2 + i)
@@ -142,77 +133,47 @@ def build_excel_report(df_results: pd.DataFrame, km_meta: dict) -> bytes:
         ws[f'{col}{kpi_row+1}'] = value
         ws[f'{col}{kpi_row+1}'].font = Font(bold=True, size=18, color='0D3B3E', name='Arial')
 
-    # Tabla de distribución por nivel de alerta (fuente del gráfico)
     chart_row = kpi_row + 4
-    ws[f'B{chart_row}'] = 'Distribución por Nivel de Alerta'
-    ws[f'B{chart_row}'].font = Font(bold=True, size=11, color='0D3B3E', name='Arial')
-
-    if 'NIVEL_ALERTA' in valid.columns:
-        alert_counts = valid['NIVEL_ALERTA'].value_counts()
-        data_start = chart_row + 1
-        ws[f'B{data_start}'] = 'Nivel'
-        ws[f'C{data_start}'] = 'Cantidad'
-        ws[f'B{data_start}'].font = HEADER_FONT
-        ws[f'C{data_start}'].font = HEADER_FONT
-        ws[f'B{data_start}'].fill = HEADER_FILL
-        ws[f'C{data_start}'].fill = HEADER_FILL
-
-        for i, level in enumerate(['Normal', 'Alerta', 'Crítico']):
-            r = data_start + 1 + i
-            ws[f'B{r}'] = level
-            ws[f'C{r}'] = int(alert_counts.get(level, 0))
-
-        chart = BarChart()
-        chart.title = 'Registros por Nivel de Alerta'
-        chart.y_axis.title = 'Cantidad'
-        chart.style = 10
-        data_ref = Reference(ws, min_col=3, min_row=data_start, max_row=data_start + 3)
-        cats_ref = Reference(ws, min_col=2, min_row=data_start + 1, max_row=data_start + 3)
-        chart.add_data(data_ref, titles_from_data=True)
-        chart.set_categories(cats_ref)
-        chart.width, chart.height = 14, 8
-        ws.add_chart(chart, f'E{chart_row}')
-
-    # Distribución por cluster
-    if 'CLUSTER' in valid.columns:
-        cl_row = data_start + 6 if 'NIVEL_ALERTA' in valid.columns else chart_row + 1
-        ws[f'B{cl_row}'] = 'Distribución por Patrón Operativo (Cluster)'
-        ws[f'B{cl_row}'].font = Font(bold=True, size=11, color='0D3B3E', name='Arial')
+    if 'CLUSTER' in valid.columns and len(valid):
+        ws[f'B{chart_row}'] = 'Distribución por Patrón Operativo (Cluster)'
+        ws[f'B{chart_row}'].font = Font(bold=True, size=11, color='0D3B3E', name='Arial')
 
         cluster_counts = valid['CLUSTER'].value_counts().sort_index()
-        cl_data_start = cl_row + 1
+        cl_data_start = chart_row + 1
         ws[f'B{cl_data_start}'] = 'Cluster'
-        ws[f'C{cl_data_start}'] = 'Cantidad'
-        ws[f'B{cl_data_start}'].font = HEADER_FONT
-        ws[f'C{cl_data_start}'].font = HEADER_FONT
-        ws[f'B{cl_data_start}'].fill = HEADER_FILL
-        ws[f'C{cl_data_start}'].fill = HEADER_FILL
+        ws[f'C{cl_data_start}'] = 'Patrón'
+        ws[f'D{cl_data_start}'] = 'Cantidad'
+        for c in 'BCD':
+            ws[f'{c}{cl_data_start}'].font = HEADER_FONT
+            ws[f'{c}{cl_data_start}'].fill = HEADER_FILL
 
         for i, (cluster_id, count) in enumerate(cluster_counts.items()):
             r = cl_data_start + 1 + i
             name = km_meta['cluster_names'].get(str(cluster_id), f'Cluster {cluster_id}')
-            ws[f'B{r}'] = f"C{cluster_id} — {name}"
-            ws[f'C{r}'] = int(count)
+            ws[f'B{r}'] = f"C{cluster_id}"
+            ws[f'C{r}'] = name
+            ws[f'D{r}'] = int(count)
 
-        pie = PieChart()
-        pie.title = 'Distribución de Patrones Operativos'
+        chart = BarChart()
+        chart.title = 'Registros por Patrón Operativo'
+        chart.y_axis.title = 'Cantidad'
+        chart.x_axis.title = 'Patrón'
+        chart.style = 10
         n = len(cluster_counts)
-        data_ref = Reference(ws, min_col=3, min_row=cl_data_start, max_row=cl_data_start + n)
+        data_ref = Reference(ws, min_col=4, min_row=cl_data_start, max_row=cl_data_start + n)
         cats_ref = Reference(ws, min_col=2, min_row=cl_data_start + 1, max_row=cl_data_start + n)
-        pie.add_data(data_ref, titles_from_data=True)
-        pie.set_categories(cats_ref)
-        pie.width, pie.height = 14, 8
-        ws.add_chart(pie, f'E{cl_row}')
+        chart.add_data(data_ref, titles_from_data=True)
+        chart.set_categories(cats_ref)
+        chart.width, chart.height = 16, 9
+        ws.add_chart(chart, f'F{chart_row}')
 
-    for col, width in zip('ABCDEF', [3, 24, 16, 14, 14, 14]):
+    for col, width in zip('ABCDEF', [3, 12, 32, 14, 4, 4]):
         ws.column_dimensions[col].width = width
 
-    # ── Hoja 2: Detalle de predicciones ────────────────────────
-    ws2 = wb.create_sheet('Detalle de Predicciones')
+    ws2 = wb.create_sheet('Detalle de Clasificaciones')
 
     export_cols = [c for c in df_results.columns if not c.startswith('_')]
-    # Reordenar para que las columnas de resultado queden al principio
-    priority = ['PREDICCION_OCUPACIONAL', 'NIVEL_ALERTA', 'CLUSTER', 'PATRON_OPERATIVO']
+    priority = ['CLUSTER', 'PATRON_OPERATIVO']
     ordered = [c for c in priority if c in export_cols] + [c for c in export_cols if c not in priority]
 
     for j, col_name in enumerate(ordered, start=1):
@@ -226,39 +187,14 @@ def build_excel_report(df_results: pd.DataFrame, km_meta: dict) -> bytes:
             val = row.get(col_name, '')
             cell = ws2.cell(row=i, column=j, value=val)
             cell.border = BORDER_THIN
-            if col_name == 'NIVEL_ALERTA' and val in ALERT_FILLS:
-                cell.fill = ALERT_FILLS[val]
-                cell.font = ALERT_FONTS[val]
+            if col_name == 'PATRON_OPERATIVO' and isinstance(val, str):
+                key = f"C{row.get('CLUSTER', '')}"
+                if key in CLUSTER_FILLS:
+                    cell.fill = CLUSTER_FILLS[key]
 
     for j, col_name in enumerate(ordered, start=1):
-        ws2.column_dimensions[get_column_letter(j)].width = max(14, len(col_name) + 2)
+        ws2.column_dimensions[get_column_letter(j)].width = max(14, len(str(col_name)) + 2)
     ws2.freeze_panes = 'A2'
-
-    # ── Hoja 3: Perfil de clusters (referencia) ────────────────
-    ws3 = wb.create_sheet('Perfil de Clusters')
-    ws3['B2'] = 'Referencia de Patrones Operativos — K-Means (K=4)'
-    ws3['B2'].font = Font(bold=True, size=13, color='0D3B3E', name='Arial')
-    ws3.merge_cells('B2:F2')
-
-    headers = ['Cluster', 'Nombre', 'Registros en Dataset', 'Descripción']
-    for j, h in enumerate(headers, start=2):
-        cell = ws3.cell(row=4, column=j, value=h)
-        cell.font = HEADER_FONT
-        cell.fill = HEADER_FILL
-
-    for i, c in enumerate(['0', '1', '2', '3']):
-        r = 5 + i
-        ws3.cell(row=r, column=2, value=f"Cluster {c}")
-        ws3.cell(row=r, column=3, value=km_meta['cluster_names'].get(c, ''))
-        ws3.cell(row=r, column=4, value=km_meta['cluster_sizes'].get(c, ''))
-        ws3.cell(row=r, column=5, value=km_meta.get('cluster_desc', {}).get(c, ''))
-        for col in range(2, 6):
-            ws3.cell(row=r, column=col).border = BORDER_THIN
-
-    ws3.column_dimensions['B'].width = 12
-    ws3.column_dimensions['C'].width = 32
-    ws3.column_dimensions['D'].width = 18
-    ws3.column_dimensions['E'].width = 50
 
     buf = io.BytesIO()
     wb.save(buf)
@@ -272,8 +208,8 @@ def build_excel_report(df_results: pd.DataFrame, km_meta: dict) -> bytes:
 def build_pdf_report(df_results: pd.DataFrame, km_meta: dict) -> bytes:
     """
     Construye un PDF de reporte ejecutivo: portada con KPIs,
-    distribución de niveles de alerta, distribución de clusters,
-    y tabla resumen de los registros más críticos.
+    distribución de patrones operativos, y tabla resumen
+    de los registros de los clusters menos frecuentes.
     """
     buf = io.BytesIO()
     doc = SimpleDocTemplate(
@@ -293,27 +229,26 @@ def build_pdf_report(df_results: pd.DataFrame, km_meta: dict) -> bytes:
     body_style = ParagraphStyle('BodyClin', parent=styles['Normal'], fontSize=9.5, leading=14)
 
     story = []
-    story.append(Paragraph('Reporte de Apoyo a la Toma de Decisiones', title_style))
-    story.append(Paragraph('Sistema REM 20 — Análisis Predictivo Hospitalario', sub_style))
+    story.append(Paragraph('Reporte de Patrones Operativos', title_style))
+    story.append(Paragraph('Sistema REM 20 — Clustering K-Means de registros hospitalarios', sub_style))
     story.append(Paragraph(f"Generado el {datetime.now().strftime('%d-%m-%Y a las %H:%M')}", sub_style))
     story.append(Spacer(1, 16))
 
     valid = df_results[df_results['_error'].isna()] if '_error' in df_results.columns else df_results
 
-    # ── KPIs ──
     story.append(Paragraph('Resumen General', h2_style))
     kpi_data = [['Métrica', 'Valor']]
     kpi_data.append(['Registros procesados', str(len(df_results))])
-    if 'PREDICCION_OCUPACIONAL' in valid.columns and len(valid):
-        kpi_data.append(['Índice ocupacional promedio', f"{valid['PREDICCION_OCUPACIONAL'].mean():.2f}%"])
-        kpi_data.append(['Índice ocupacional máximo', f"{valid['PREDICCION_OCUPACIONAL'].max():.2f}%"])
-        kpi_data.append(['Índice ocupacional mínimo', f"{valid['PREDICCION_OCUPACIONAL'].min():.2f}%"])
-    if 'NIVEL_ALERTA' in valid.columns:
-        kpi_data.append(['Registros en nivel Crítico', str(int((valid['NIVEL_ALERTA'] == 'Crítico').sum()))])
-        kpi_data.append(['Registros en nivel Alerta', str(int((valid['NIVEL_ALERTA'] == 'Alerta').sum()))])
-        kpi_data.append(['Registros en nivel Normal', str(int((valid['NIVEL_ALERTA'] == 'Normal').sum()))])
+    kpi_data.append(['Registros clasificados OK', str(len(valid))])
+    if 'CLUSTER' in valid.columns and len(valid):
+        kpi_data.append(['Patrones distintos detectados', str(valid['CLUSTER'].nunique())])
+        for cid in sorted(valid['CLUSTER'].unique()):
+            name = km_meta['cluster_names'].get(str(cid), f'Cluster {cid}')
+            count = int((valid['CLUSTER'] == cid).sum())
+            pct = count / len(valid) * 100
+            kpi_data.append([f"  C{cid} — {name}", f"{count}  ({pct:.1f}%)"])
 
-    t = Table(kpi_data, colWidths=[9 * cm, 6 * cm])
+    t = Table(kpi_data, colWidths=[11 * cm, 4 * cm])
     t.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), ink),
         ('TEXTCOLOR', (0, 0), (-1, 0), rl_colors.white),
@@ -327,7 +262,6 @@ def build_pdf_report(df_results: pd.DataFrame, km_meta: dict) -> bytes:
     ]))
     story.append(t)
 
-    # ── Distribución de clusters ──
     if 'CLUSTER' in valid.columns and len(valid):
         story.append(Paragraph('Distribución de Patrones Operativos', h2_style))
         cluster_counts = valid['CLUSTER'].value_counts().sort_index()
@@ -350,39 +284,33 @@ def build_pdf_report(df_results: pd.DataFrame, km_meta: dict) -> bytes:
         ]))
         story.append(t2)
 
-    # ── Top registros críticos ──
-    if 'NIVEL_ALERTA' in valid.columns:
-        criticos = valid[valid['NIVEL_ALERTA'] == 'Crítico'].copy()
-        if len(criticos):
-            story.append(Paragraph(
-                f'Registros en Nivel Crítico ({len(criticos)} de {len(valid)})', h2_style
-            ))
-            criticos = criticos.sort_values('PREDICCION_OCUPACIONAL', ascending=False).head(15)
-            cols_show = [c for c in ['ESTABLECIMIENTO', 'AREA_FUNCIONAL', 'PREDICCION_OCUPACIONAL', 'CLUSTER'] if c in criticos.columns]
-            crit_data = [cols_show]
-            for _, row in criticos.iterrows():
-                crit_data.append([str(row[c])[:35] for c in cols_show])
-
-            col_widths = [5.5 * cm, 5.5 * cm, 2.5 * cm, 1.5 * cm][:len(cols_show)]
-            t3 = Table(crit_data, colWidths=col_widths, repeatRows=1)
-            t3.setStyle(TableStyle([
-                ('BACKGROUND', (0, 0), (-1, 0), rl_colors.HexColor('#DC2626')),
+        if 'INDICE_OCUPACIONAL' in valid.columns:
+            story.append(Paragraph('Indicadores Promedio por Patrón', h2_style))
+            agg_cols = [c for c in ['INDICE_OCUPACIONAL', 'LETALIDAD', 'PROMEDIO_DIAS_ESTADA', 'INDICE_ROTACION', 'NUMERO_EGRESOS'] if c in valid.columns]
+            agg = valid.groupby('CLUSTER')[agg_cols].mean().round(2)
+            head = ['Patrón'] + agg_cols
+            rows = [head]
+            for cid, r in agg.iterrows():
+                name = km_meta['cluster_names'].get(str(cid), f'Cluster {cid}')
+                rows.append([f"C{cid} — {name}"] + [str(r[c]) for c in agg_cols])
+            col_w = [4.5 * cm] + [2.3 * cm] * len(agg_cols)
+            t4 = Table(rows, colWidths=col_w, repeatRows=1)
+            t4.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, 0), teal),
                 ('TEXTCOLOR', (0, 0), (-1, 0), rl_colors.white),
                 ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-                ('FONTSIZE', (0, 0), (-1, -1), 8),
-                ('ROWBACKGROUNDS', (0, 1), (-1, -1), [rl_colors.white, rl_colors.HexColor('#FEF2F2')]),
+                ('FONTSIZE', (0, 0), (-1, -1), 8.5),
+                ('ROWBACKGROUNDS', (0, 1), (-1, -1), [rl_colors.white, rl_colors.HexColor('#FAFAF7')]),
                 ('GRID', (0, 0), (-1, -1), 0.5, rl_colors.HexColor('#E8E3D8')),
-                ('TOPPADDING', (0, 0), (-1, -1), 4),
-                ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+                ('TOPPADDING', (0, 0), (-1, -1), 5),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
             ]))
-            story.append(t3)
-        else:
-            story.append(Paragraph('No se encontraron registros en nivel Crítico.', body_style))
+            story.append(t4)
 
     story.append(Spacer(1, 20))
     story.append(Paragraph(
-        'Reporte generado automáticamente por el sistema de apoyo a la decisión REM 20. '
-        'Modelos: Random Forest (regresión de ocupación) y K-Means K=4 (clustering de patrones operativos). '
+        'Reporte generado automáticamente por el sistema REM 20. '
+        'Modelo: K-Means (K=4, clustering de patrones operativos). '
         'Proyecto de Minería de Datos — BIY7121.',
         ParagraphStyle('Footer', parent=body_style, fontSize=7.5, textColor=steel),
     ))

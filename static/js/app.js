@@ -5,52 +5,10 @@ function switchTab(name, btn) {
   btn.classList.add('active');
 }
 
-// ── Safe JSON: never throws if server returns HTML error page ──
 async function safeJson(res) {
   const text = await res.text();
   try { return JSON.parse(text); }
   catch { return { error: `Error del servidor (HTTP ${res.status}). Revisa la consola.` }; }
-}
-
-const TRIAGE = {
-  'Normal':   { bg: '#ecfdf3', border: '#16a34a', text: '#15803d' },
-  'Alerta':   { bg: '#fffbeb', border: '#d97706', text: '#92610a' },
-  'Crítico':  { bg: '#fef2f2', border: '#dc2626', text: '#b91c1c' },
-};
-
-async function predictRegression() {
-  document.getElementById('r_error').textContent = '';
-  document.getElementById('r_result').style.display = 'none';
-
-  const fields = [
-    'AREA_FUNCIONAL','ESTABLECIMIENTO','PERIODO','MES','TIPO_PERTENENCIA',
-    'DIAS_CAMAS_OCUPADAS','DIAS_CAMAS_DISPONIBLES','DIAS_ESTADA',
-    'NUMERO_EGRESOS','EGRESOS_FALLECIDOS','TRASLADOS',
-    'PROMEDIO_CAMAS_DISPONIBLE','PROMEDIO_DIAS_ESTADA',
-    'LETALIDAD','INDICE_ROTACION'
-  ];
-  const fd = new FormData();
-  for (const f of fields) fd.append(f, document.getElementById('r_' + f).value);
-
-  const res  = await fetch('/predict/regression', { method: 'POST', body: fd });
-  const data = await safeJson(res);
-
-  if (data.error) { document.getElementById('r_error').textContent = 'ERROR: ' + data.error; return; }
-
-  const t = TRIAGE[data.alert_level] || TRIAGE['Normal'];
-  const box = document.getElementById('r_result');
-  box.style.display    = 'block';
-  box.style.borderColor = t.border;
-
-  const head = document.getElementById('r_vitals_head');
-  head.style.background = t.bg;
-  head.style.color = t.text;
-  document.getElementById('r_pulse').style.background = t.border;
-  document.getElementById('r_status_text').textContent = 'NIVEL DE ALERTA: ' + data.alert_level.toUpperCase();
-  document.getElementById('r_value').style.color = t.border;
-  document.getElementById('r_value').textContent = data.prediction + '%';
-  document.getElementById('r_label').textContent = data.icon + ' ' + data.alert_level;
-  document.getElementById('r_label').style.color = t.text;
 }
 
 const KM_FEATURE_LABELS = {
@@ -105,7 +63,7 @@ async function predictCluster() {
 }
 
 // ════════════════════════════════════════════════════════════
-//  PANEL 3 — IMPORTAR / EXPORTAR
+//  PANEL 2 — IMPORTAR / EXPORTAR
 // ════════════════════════════════════════════════════════════
 let lastBatchToken = null;
 
@@ -173,10 +131,8 @@ function renderBatchResults(data) {
   const summary = document.getElementById('batch_summary');
   summary.innerHTML = '';
   const stats = [
-    { label: 'Procesados',      value: data.total_rows },
-    { label: 'Ocup. Promedio',  value: data.avg_occupancy !== null ? data.avg_occupancy + '%' : '—' },
-    { label: 'Nivel Crítico',   value: data.alert_counts['Crítico'] || 0 },
-    { label: 'Errores',         value: data.error_count },
+    { label: 'Procesados', value: data.total_rows },
+    { label: 'Errores',    value: data.error_count },
   ];
   for (const s of stats) {
     const div = document.createElement('div');
@@ -199,10 +155,11 @@ function renderBatchResults(data) {
     thead.appendChild(th);
   }
 
-  const ALERT_COLORS = {
-    'Normal':  { bg: '#dcfce7', text: '#15803d' },
-    'Alerta':  { bg: '#fef9c3', text: '#92610a' },
-    'Crítico': { bg: '#fee2e2', text: '#b91c1c' },
+  const CLUSTER_COLORS = {
+    0: { bg: '#fff7ed', text: '#9a3412' },
+    1: { bg: '#ecfdf3', text: '#15803d' },
+    2: { bg: '#eff6ff', text: '#1d4ed8' },
+    3: { bg: '#fef2f2', text: '#b91c1c' },
   };
 
   for (const row of data.preview) {
@@ -210,12 +167,12 @@ function renderBatchResults(data) {
     for (const c of cols) {
       const td = document.createElement('td');
       const val = row[c];
-      if (c === 'NIVEL_ALERTA' && ALERT_COLORS[val]) {
+      if (c === 'CLUSTER' && CLUSTER_COLORS[val]) {
         const chip = document.createElement('span');
         chip.className = 'badge-chip';
-        chip.style.background = ALERT_COLORS[val].bg;
-        chip.style.color = ALERT_COLORS[val].text;
-        chip.textContent = val;
+        chip.style.background = CLUSTER_COLORS[val].bg;
+        chip.style.color = CLUSTER_COLORS[val].text;
+        chip.textContent = 'C' + val;
         td.appendChild(chip);
       } else {
         td.textContent = val === null || val === undefined ? '—' : val;
@@ -235,51 +192,8 @@ function exportReport(format) {
 }
 
 // ════════════════════════════════════════════════════════════
-//  EJEMPLOS PRECARGADOS — datos reales del dataset REM 20
+//  EJEMPLOS PRECARGADOS — clustering
 // ════════════════════════════════════════════════════════════
-
-const REGRESSION_EXAMPLES = [
-  {
-    _label: 'Normal — Hospital Angol, Neonatología Intermedios, Sep 2014',
-    PERIODO: 2014, MES: 9, TIPO_PERTENENCIA: 1,
-    AREA_FUNCIONAL: 'Área Neonatología Cuidados Intermedios ',
-    ESTABLECIMIENTO: 'Hospital Dr Mauricio Heyermann (Angol)',
-    DIAS_CAMAS_OCUPADAS: 42, DIAS_CAMAS_DISPONIBLES: 90, DIAS_ESTADA: 40,
-    NUMERO_EGRESOS: 7, EGRESOS_FALLECIDOS: 0, TRASLADOS: 6,
-    PROMEDIO_CAMAS_DISPONIBLE: 3.0, PROMEDIO_DIAS_ESTADA: 5.7,
-    LETALIDAD: 0.00, INDICE_ROTACION: 2.33,
-  },
-  {
-    _label: 'Alerta — Hospital Villarrica, Med-Quirúrgico Pediátrico, Dic 2016',
-    PERIODO: 2016, MES: 12, TIPO_PERTENENCIA: 1,
-    AREA_FUNCIONAL: 'Área Médico-Quirúrgico Pediátrica Cuidados Básicos ',
-    ESTABLECIMIENTO: 'Hospital de Villarrica',
-    DIAS_CAMAS_OCUPADAS: 235, DIAS_CAMAS_DISPONIBLES: 304, DIAS_ESTADA: 227,
-    NUMERO_EGRESOS: 70, EGRESOS_FALLECIDOS: 0, TRASLADOS: 0,
-    PROMEDIO_CAMAS_DISPONIBLE: 9.8, PROMEDIO_DIAS_ESTADA: 3.2,
-    LETALIDAD: 0.00, INDICE_ROTACION: 7.14,
-  },
-  {
-    _label: 'Crítico C0 — C.H. San José, Med-Quirúrgico Básico, Dic 2021',
-    PERIODO: 2021, MES: 12, TIPO_PERTENENCIA: 1,
-    AREA_FUNCIONAL: 'Área Médico-Quirúrgico Cuidados Básicos ',
-    ESTABLECIMIENTO: 'Complejo Hospitalario San José (Santiago, Independencia)',
-    DIAS_CAMAS_OCUPADAS: 5873, DIAS_CAMAS_DISPONIBLES: 6324, DIAS_ESTADA: 6127,
-    NUMERO_EGRESOS: 617, EGRESOS_FALLECIDOS: 10, TRASLADOS: 140,
-    PROMEDIO_CAMAS_DISPONIBLE: 162.2, PROMEDIO_DIAS_ESTADA: 8.5,
-    LETALIDAD: 1.39, INDICE_ROTACION: 3.54,
-  },
-  {
-    _label: 'Crítico C3 — H. La Florida, Neonatología Intensivos, Feb 2018',
-    PERIODO: 2018, MES: 2, TIPO_PERTENENCIA: 1,
-    AREA_FUNCIONAL: 'Área Neonatología Cuidados Intensivos ',
-    ESTABLECIMIENTO: 'Hospital Clínico Metropolitano La Florida Dra. Eloisa Díaz Inzunza',
-    DIAS_CAMAS_OCUPADAS: 141, DIAS_CAMAS_DISPONIBLES: 173, DIAS_ESTADA: 175,
-    NUMERO_EGRESOS: 4, EGRESOS_FALLECIDOS: 3, TRASLADOS: 15,
-    PROMEDIO_CAMAS_DISPONIBLE: 6.2, PROMEDIO_DIAS_ESTADA: 43.8,
-    LETALIDAD: 75.00, INDICE_ROTACION: 0.65,
-  },
-];
 
 const CLUSTER_EXAMPLES = [
   {
@@ -307,34 +221,6 @@ const CLUSTER_EXAMPLES = [
     PROMEDIO_CAMAS_DISPONIBLE: 6.2, LETALIDAD: 75.00, MES: 2,
   },
 ];
-
-function loadRegressionExample(idx) {
-  const ex = REGRESSION_EXAMPLES[idx];
-  const numFields = [
-    'PERIODO','MES','TIPO_PERTENENCIA','DIAS_CAMAS_OCUPADAS','DIAS_CAMAS_DISPONIBLES',
-    'DIAS_ESTADA','NUMERO_EGRESOS','EGRESOS_FALLECIDOS','TRASLADOS',
-    'PROMEDIO_CAMAS_DISPONIBLE','PROMEDIO_DIAS_ESTADA','LETALIDAD','INDICE_ROTACION',
-  ];
-  const selFields = ['AREA_FUNCIONAL','ESTABLECIMIENTO'];
-
-  for (const f of numFields) {
-    const el = document.getElementById('r_' + f);
-    if (el) el.value = ex[f];
-  }
-  for (const f of selFields) {
-    const el = document.getElementById('r_' + f);
-    if (!el) continue;
-    // find matching option (trim spaces since dataset has trailing spaces)
-    const target = ex[f].trim();
-    for (const opt of el.options) {
-      if (opt.value.trim() === target) { el.value = opt.value; break; }
-    }
-  }
-
-  // hide previous result so user sees the change
-  document.getElementById('r_result').style.display = 'none';
-  document.getElementById('r_error').textContent = '';
-}
 
 function loadClusterExample(idx) {
   const ex = CLUSTER_EXAMPLES[idx];
