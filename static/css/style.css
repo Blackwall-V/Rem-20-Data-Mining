@@ -560,5 +560,171 @@
 .example-btn:hover {
   border-color: var(--teal);
   color: var(--teal);
-  background: rgba(26,107,111,.04);
+  background: rgba(26,107,107,.04);
 }
+
+/* ── Intro hero (orientación para usuarios nuevos) ── */
+.intro-hero {
+  background: var(--paper-card);
+  border: 1px solid var(--paper-line);
+  border-left: 4px solid var(--teal);
+  border-radius: 4px;
+  padding: 22px 26px 24px;
+  margin-bottom: 18px;
+  position: relative;
+  background-image: linear-gradient(var(--paper-line) 1px, transparent 1px);
+  background-size: 100% 32px;
+  background-position: 0 14px;
+}
+.intro-inner { max-width: 920px; }
+.intro-tag {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--teal);
+}
+.intro-hero h2 {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--ink);
+  margin: 4px 0 16px;
+  letter-spacing: -.01em;
+}
+.intro-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.intro-card {
+  background: #fbfaf7;
+  border: 1px solid var(--paper-line);
+  border-radius: 3px;
+  padding: 14px 14px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  position: relative;
+  transition: border-color .15s, transform .15s;
+}
+.intro-card:hover {
+  border-color: var(--teal);
+  transform: translateY(-1px);
+}
+.intro-num {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--teal);
+  letter-spacing: .08em;
+}
+.intro-card h3 {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ink);
+  margin: 2px 0 4px;
+}
+.intro-card p {
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--ink-soft);
+  font-family: var(--font-display);
+}
+.intro-hint {
+  font-family: var(--font-display);
+  font-size: 12.5px;
+  color: var(--steel-dark);
+  line-height: 1.55;
+  margin-top: 4px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--paper-line);
+}
+.intro-hint strong { color: var(--ink); }
+.intro-hint-i {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--paper-line);
+  color: var(--ink-soft);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 700;
+  vertical-align: 1px;
+  margin: 0 2px;
+}
+@media (max-width: 760px) {
+  .intro-grid { grid-template-columns: 1fr; }
+  .intro-hero { padding: 18px 18px 20px; }
+}
+
+/* ── Tooltip ⓘ icons sobre los campos del formulario ── */
+.label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+.label-row label { flex: 1; }
+.info-i {
+  width: 15px;
+  height: 15px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--paper-line);
+  color: var(--ink-soft);
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  font-weight: 700;
+  cursor: help;
+  position: relative;
+  user-select: none;
+  flex-shrink: 0;
+  transition: background .15s, color .15s;
+}
+.info-i:hover { background: var(--teal); color: white; }
+.info-i::after {
+  content: attr(data-tip);
+  position: absolute;
+  bottom: calc(100% + 9px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: max-content;
+  max-width: 260px;
+  padding: 8px 10px;
+  background: var(--ink);
+  color: var(--paper);
+  font-family: var(--font-display);
+  font-size: 12px;
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: 0;
+  line-height: 1.4;
+  border-radius: 4px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .15s;
+  z-index: 50;
+  box-shadow: 0 6px 18px rgba(13,59,62,.28);
+  text-align: left;
+}
+.info-i:hover::after { opacity: 1; }
+.info-i::before {
+  content: '';
+  position: absolute;
+  bottom: calc(100% + 3px);
+  left: 50%;
+  transform: translateX(-50%);
+  border: 5px solid transparent;
+  border-top-color: var(--ink);
+  opacity: 0;
+  transition: opacity .15s;
+  z-index: 50;
+}
+.info-i:hover::before { opacity: 1; }
